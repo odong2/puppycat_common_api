@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.architecture.admin.models.daosub.policy.PolicyDaoSub">
+    <!-- ==============================================================
+        SETTING
+    =============================================================== -->
+    <!-- database name -->
+    <sql id="database">${databaseRefId}</sql>
+
+    <!-- 공통으로 사용할 field -->
+    <sql id="policyColumns">
+
+    </sql>
+
+    <!-- ==============================================================
+        SELECT
+    =============================================================== -->
+    <!-- 이용약관 목록 -->
+    <select id="getPolicyList" parameterType="SearchDto" resultType="PolicyDto">
+        SELECT
+            `pubopo`.`idx`
+            ,IFNULL(`pubopoti`.`title`,`pubopo`.`title`) AS `title`
+            ,`pubopo`.`required`
+            ,`pubopo`.`state`
+            ,`pubopo`.`menu_idx`
+            ,`pubopode`.`detail`
+            ,IFNULL(`pubopomena`.`name`,`pubopome`.`name`) AS `menu_name`
+            ,CONVERT_TZ(`pubopo`.`reg_date`, 'UTC', '${convertTZ}') AS `reg_date`
+        FROM <include refid="database" />`puppycat_board_policy` AS `pubopo`
+        INNER JOIN <include refid="database"/>`puppycat_board_policy_menu` AS `pubopome`
+            ON `pubopo`.`menu_idx` = `pubopome`.`idx`
+            AND `pubopome`.`state` = 1
+        LEFT JOIN <include refid="database"/>`puppycat_board_policy_menu_name` AS `pubopomena`
+            ON `pubopome`.`idx` = `pubopomena`.`menu_idx`
+            AND `pubopomena`.`lang` = 'ko'
+            AND  `pubopomena`.`state` = 1
+        LEFT JOIN <include refid="database" />`puppycat_board_policy_title` AS `pubopoti`
+            ON `pubopo`.`idx` = `pubopoti`.`policy_idx`
+            AND `pubopoti`.`lang` = #{lang}
+            AND `pubopoti`.`state` = '1'
+        LEFT JOIN <include refid="database" />`puppycat_board_policy_detail` AS `pubopode`
+            ON `pubopo`.`idx` = `pubopode`.`policy_idx`
+            AND `pubopode`.`lang` = #{lang}
+            AND `pubopode`.`state` = '1'
+        WHERE
+                `pubopo`.`state` = '1'
+            <if test="type == null">
+                 AND `pubopo`.`current` = '1'
+            </if>
+            <if test="type != null">
+                AND `pubopo`.`menu_idx` = #{type}
+            </if>
+            <if test="date != null and date != ''">
+                <![CDATA[
+                    AND DATE_FORMAT(CONVERT_TZ(`pubopo`.`reg_date`, 'UTC', '${convertTZ}'), '%Y-%m-%d') = #{date}
+                ]]>
+            </if>
+        ORDER BY `pubopo`.`required` DESC
+    </select>
+
+    <!-- 약관 메뉴 리스트 가져오기 -->
+    <select id="getPolicyMenuList" parameterType="PolicyDto" resultType="PolicyDto">
+        SELECT
+            `pubopome`.`idx`
+            ,IFNULL(`pubopomena`.`name`,`pubopome`.`name`) AS `menu_name`
+        FROM
+            <include refid="database"/>`puppycat_board_policy_menu`AS `pubopome`
+        LEFT JOIN  <include refid="database"/>`puppycat_board_policy_menu_name` AS `pubopomena`
+            ON `pubopome`.`idx` = `pubopomena`.`menu_idx`
+            AND `pubopomena`.`lang` = 'ko'
+            AND  `pubopomena`.`state` = 1
+        WHERE `pubopome`.`state` = '1'
+        ORDER BY `pubopome`.`idx` ASC
+    </select>
+
+
+    <!-- 약관 메뉴 리스트 가져오기 -->
+    <select id="getPolicyDateList" parameterType="int" resultType="String">
+        SELECT
+            DATE(CONVERT_TZ(`pubopo`.`reg_date`, 'UTC',  '${convertTZ}')) AS `reg_date`
+        FROM
+            <include refid="database"/>`puppycat_board_policy`AS `pubopo`
+        WHERE
+                `pubopo`.`menu_idx` = #{menu}
+            AND `pubopo`.`state` = 1
+        ORDER BY `pubopo`.`reg_date` DESC
+    </select>
+</mapper>
